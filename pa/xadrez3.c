@@ -60,7 +60,7 @@ int decodeColumn(char c) {
 }
 
 
-int straightDistance(int x1, int y1, int x2, int y2) {
+int verticalDistance(int x1, int y1, int x2, int y2) {
 	return abs(x1 - x2) + abs(y1 - y2);
 }
 
@@ -150,14 +150,14 @@ unsigned char isEmpty(char piece) {
 	return piece == '.' ? 1 : 0;
 }
 
-unsigned char areEnemies(char piece1, char piece2) {
+unsigned char isEnemy(char piece1, char piece2) {
 	if ((piece1 >= 'A' && piece1 <= 'Z' && piece2 >= 'a' && piece2 <= 'z') || (piece2 >= 'A' && piece2 <= 'Z' && piece1 >= 'a' && piece1 <= 'z')) {
 		return 1;
 	}
 	return 0;
 }
 
-unsigned char areFriends(char piece1, char piece2) {
+unsigned char isFriend(char piece1, char piece2) {
 	if ((piece1 >= 'A' && piece1 <= 'Z' && piece2 >= 'A' && piece2 <= 'Z') || (piece2 >= 'a' && piece2 <= 'z' && piece1 >= 'a' && piece1 <= 'z')) {
 		return 1;
 	}
@@ -172,7 +172,7 @@ unsigned char isBlack(char piece) {
 	return piece >= 'a' && piece <= 'z';
 }
 
-unsigned char isAhead(char piece, int x1, int x2) {
+unsigned char isOpposite(char piece, int x1, int x2) {
 	if ((isWhite(piece) && x2 < x1) || (isBlack(piece) && x1 < x2)) {
 		return 1;
 	}
@@ -193,18 +193,6 @@ unsigned char isSecondRow(int x) {
 
 unsigned char isPenultimateRow(int x) {
 	return x == 1 ? 1 : 0;
-}
-
-unsigned char areVerticallyAligned(int y1, int y2) {
-	return y1 == y2 ? 1 : 0;
-}
-
-unsigned char areHorizontallyAligned(int x1, int x2) {
-	return x1 == x2 ? 1 : 0;
-}
-
-unsigned char areDiagonallyAligned(int x1, int y1, int x2, int y2) {
-	return abs(x1 - x2) == abs(y1 - y2) ? 1 : 0;
 }
 
 int find(struct xpiece *list, int x, int y) {
@@ -308,48 +296,28 @@ unsigned char isExiting(char piece, int x) {
 }
 
 unsigned char canBishopMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
+	if (x1 == x2 && y1 == y2) {
 		return 0;
 	}
 	return canDiagonalMove(board, x1, y1, x2, y2);
 }
 
-// ok?
-unsigned char canRookMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
+unsigned char canRookMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
+	if (x1 == x2 && y1 == y2) {
 		return 0;
 	}
-	char thisOne = board[x1][y1];
-	char thatOne = board[x2][y2];
-	switch (moveType) {
-		case 0:
-			return canVerticalMove(board, x1, y1, x2, y2) & isEmpty(thisOne);
-			break;
-		case 1:
-			return canVerticalMove(board, x1, y1, x2, y2) & areEnemies(thisOne, thatOne);
-	}
-	return 0;
+	return canVerticalMove(board, x1, y1, x2, y2);
 }
 
-// ok?
 unsigned char canQueenMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
+	if (x1 == x2 && y1 == y2) {
 		return 0;
 	}
-	char thisOne = board[x1][y1];
-	char thatOne = board[x2][y2];
-	switch (moveType) {
-		case 0:
-			return (canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2)) & isEmpty(thisOne);
-			break;
-		case 1:
-			return (canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2)) & areEnemies(thisOne, thatOne);
-	}
-	return 0;
+	return canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2);
 }
 
 unsigned char canKingMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
+	if (x1 == x2 && y1 == y2) {
 		return 0;
 	}
 	if (verticalDistance(x1, y1, x2, y2) != 1 && diagonalDistance(x1, x2) != 1 && !hasCastlingAvailable (castling, board[x1][y1])) {
@@ -358,37 +326,34 @@ unsigned char canKingMove(char **board, char *castling, char *enpassant, int x1,
 	return canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2) | canCastle(castling, x2, y2);
 }
 
-unsigned char isWithinBounds(int x, int y) {
-	return x >= 0 && x < 8 && y >= 0 && y < 8 ? 1 : 0;
-}
-
-// moveType: 0 = ocupação, 1 = ataque, ok?
-unsigned char canPawnMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {	
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
+unsigned char canPawnMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
+	if (x1 == x2 && y1 == y2) {
 		return 0;
 	}
-	char thisOne = board[x1][y1];
-	char thatOne = board[x2][y2];
-	switch (moveType) {
-		case 0:
-			if (isAhead(thisOne, x1, x2) && areVerticallyAligned(y1, y2)) {
-				switch (straightDistance(x1, y1, x2, y2)) {
-					case 1:
-						if (isEmpty(thatOne)) {
-							return 1;
-						}
-						break;
-					case 2:
-						if (isExiting(content, x1) && isEmpty(thatOne)) {
-							return 1;
-						}
-				}
-			} 
-		case 1:
-			if (areEnemies(thisOne, thatOne) && isAhead(thisOne, x1, x2) && areDiagonallyAligned(x1, y1, x2, y2) && diagonalDistance(x1, y1, x2, y2) == 1) {
-				return 1;
-			}
-		
+	if (isPlayer(board[x1][y1]) == 'w') {
+		if (isEmpty(board[x2][y2]) && x1 - 1 == x2 && y1 == y2) {
+			return 1;
+		}
+		if (isEnemy(board[x1][y1], board[x2][y2]) && x1 - 1 == x2 && abs(y1 - y2) == 1) {
+			return 1;
+		}
+//		printf("1- %d\n", isExiting(board[x1][y1], x1));
+//		printf("2- %d\n", isEmpty(board[x1 - 1][y1]));
+//		printf("3- %d\n", x1 - 2 == x2 && y1 == y2);
+			if (isExiting(board[x1][y1], x1) && isEmpty(board[x1 - 1][y1]) && x1 - 2 == x2 && y1 == y2) {
+			return 1;
+		}
+	}
+	if (isPlayer(board[x1][y1]) == 'b') {
+		if (isEmpty(board[x2][y2]) && x1 + 1 == x2 && y1 == y2) {
+			return 1;
+		}
+		if (isEnemy(board[x1][y1], board[x2][y2]) && x1 + 1 == x2 && abs(y1 - y2) == 1) {
+			return 1;
+		}
+		if (isExiting(board[x1][y1], x1) && isEmpty(board[x1 + 1][y1]) && x1 + 2 == x2 && y1 == y2) {
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -954,7 +919,7 @@ int main() {
 	int i, half, full;
 	char player, *command, *boardConfig, *castling, *enpassant, **board;
 	struct xpiece *list;
-	
+
 	boardConfig = (char *) malloc(80 * sizeof(char));
 	castling = (char *) malloc(80 * sizeof(char));
 	enpassant = (char *) malloc(80 * sizeof(char));
@@ -979,6 +944,66 @@ int main() {
 	
 	list = makeList(board);
 
+	while (1) {
+		printf("%s %c %s %s %d %d\n", boardConfig, player, castling, enpassant, half, full);
+		if (half == 50) {
+			printf("Empate -- Regra dos 50 Movimentos\n");
+			break;
+		}
+		if (lacksMaterial(board)) {
+			printf("Empate -- Falta de Material\n");
+			break;
+		}
+		if (isWhiteKingInCheck(board, list, castling, enpassant) && 
+		    !canWhiteKingReact(board, list, castling, enpassant)) {
+				printf("Cheque-mate -- Vitoria: PRETO\n");
+				break;
+			}
+		if (isBlackKingInCheck(board, list, castling, enpassant) && 
+		    !canBlackKingReact(board, list, castling, enpassant)) {
+				printf("Cheque-mate -- Vitoria: BRANCO\n");
+				break;
+			}
+		scanf("%s\n", command);
+		int y1 = decodeColumn(command[0]);
+		int x1 = decodeRow(command[1]);
+		int y2 = decodeColumn(command[2]);
+		int x2 = decodeRow(command[3]);
+		int idx = find(list, x1, y1);
+		if (list[idx].isActive && 
+		    isPlayer(board[x1][y1]) == player && 
+		    !isFriend(board[x1][y1], board[x2][y2]) && 
+		    list[idx].moveFun(board, castling, enpassant, x1, y1, x2, y2)) {
+			if (canCastle(castling, x2, y2)) {
+			}
+			if (isEnpassant(enpassant, x2, y2)) {
+				takePiece(board, list, x1, y2);
+				movePieceTo(board, list, x1, y1, x2, y2);
+				half = 0;
+			} else {
+				if (isPawn(board[x1][y1])) {
+					half = 0;
+				} else {
+					++half;
+				}
+				if (isAttack(board, x1, y1, x2, y2)) {
+					takePiece(board, list, x2, y2);
+				}
+				movePieceTo(board, list, x1, y1, x2, y2);
+			}
+			if (player == 'b') {
+				++full;
+			}
+		} else {
+			printf("Movimento invalido. Tente novamente.\n");
+		}
+		encodeBoard(boardConfig, board);
+		if (player == 'w') {
+			player = 'b';
+		} else {
+			player = 'w';
+		}
+	}
 
 	free(boardConfig);
 	free(castling);
