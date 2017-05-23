@@ -239,14 +239,17 @@ unsigned char canCastle(char *castling, int x, int y) {
 				if (x == 7 && y == 6) {
 					return 1;
 				}
+				break;
 			case 'Q':
 				if (x == 7 && y == 2) {
 					return 1;
 				}
+				break;
 			case 'k':
 				if (x == 0 && y == 6) {
 					return 1;
 				}
+				break;
 			case 'q':
 				if (x == 0 && y == 2) {
 					return 1;
@@ -257,10 +260,12 @@ unsigned char canCastle(char *castling, int x, int y) {
 	return 0;
 }
 
-unsigned char canVerticalMove(char **board, int x1, int y1, int x2, int y2) {
-	if ((x1 == x2 && y1 == y2) || (x1 != x2 && y1 != y2)) {
+unsigned char canStraightMove(char **board, int x1, int y1, int x2, int y2) {
+	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1) || !isWithinBounds(x2, y2)) {
 		return 0;
 	}
+	char thisOne = board[x1][y1];
+	char thatOne = board[x2][y2];
 	while (x1 != x2 || y1 != y2) {
 		x1 += move(x1, x2);
 		y1 += move(y1, y2);
@@ -277,9 +282,11 @@ unsigned char canVerticalMove(char **board, int x1, int y1, int x2, int y2) {
 }
 
 unsigned char canDiagonalMove(char **board, int x1, int y1, int x2, int y2) {
-	if ((x1 == x2 && y1 == y2) || abs(x1 - x2) != abs(y1 - y2)) {
+	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1) || !isWithinBounds(x2, y2)) {
 		return 0;
 	}
+	char thisOne = board[x1][y1];
+	char thatOne = board[x2][y2];
 	while (x1 != x2 || y1 != y2) {
 		x1 += move(x1, x2);
 		y1 += move(y1, y2);
@@ -296,7 +303,10 @@ unsigned char canDiagonalMove(char **board, int x1, int y1, int x2, int y2) {
 }
 
 unsigned char canLMove(char **board, int x1, int y1, int x2, int y2) {
-	return ((!isFriend(board[x1][y1], board[x2][y2]) && (abs(x1 - x2) == 2 && abs(y1 - y2) == 1)) || (abs(x1 - x2) == 1 && abs(y1 - y2) == 2)) ? 1 : 0; 
+	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1) || !isWithinBounds(x2, y2)) {
+		return 0;
+	}
+	return ((abs(x1 - x2) == 2 && abs(y1 - y2) == 1) || (abs(x1 - x2) == 1 && abs(y1 - y2) == 2)) ? 1 : 0; 
 }
 
 unsigned char isToPromote(char **board, int x1, int y1, int x2, int y2) {
@@ -307,77 +317,62 @@ unsigned char isExiting(char piece, int x) {
 	return (isPawn(piece) && isSecondRow(x) && isWhite(piece)) || (isPenultimateRow(x) && isBlack(piece)) ? 1 : 0;
 }
 
-unsigned char canBishopMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
-		return 0;
-	}
-	return canDiagonalMove(board, x1, y1, x2, y2);
-}
-
-// ok?
-unsigned char canRookMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
-		return 0;
-	}
+unsigned char canBishopMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
 	char thisOne = board[x1][y1];
 	char thatOne = board[x2][y2];
 	switch (moveType) {
 		case 0:
-			return canVerticalMove(board, x1, y1, x2, y2) & isEmpty(thisOne);
+			return canDiagonalMove(board, x1, y1, x2, y2) & isEmpty(thisOne);
 			break;
 		case 1:
-			return canVerticalMove(board, x1, y1, x2, y2) & areEnemies(thisOne, thatOne);
+			return canDiagonalMove(board, x1, y1, x2, y2) & areEnemies(thisOne, thatOne);
 	}
 	return 0;
 }
 
 // ok?
-unsigned char canQueenMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
-		return 0;
-	}
+unsigned char canRookMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
 	char thisOne = board[x1][y1];
 	char thatOne = board[x2][y2];
 	switch (moveType) {
 		case 0:
-			return (canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2)) & isEmpty(thisOne);
+			return canStraightMove(board, x1, y1, x2, y2) & isEmpty(thisOne);
 			break;
 		case 1:
-			return (canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2)) & areEnemies(thisOne, thatOne);
+			return canStraightMove(board, x1, y1, x2, y2) & areEnemies(thisOne, thatOne);
+	}
+	return 0;
+}
+
+// ok?
+unsigned char canQueenMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
+	char thisOne = board[x1][y1];
+	char thatOne = board[x2][y2];
+	switch (moveType) {
+		case 0:
+			return (canDiagonalMove(board, x1, y1, x2, y2) | canStraightMove(board, x1, y1, x2, y2)) & isEmpty(thisOne);
+			break;
+		case 1:
+			return (canDiagonalMove(board, x1, y1, x2, y2) | canStraightMove(board, x1, y1, x2, y2)) & areEnemies(thisOne, thatOne);
 	}
 	return 0;
 }
 
 unsigned char canKingMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
+	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1) || !isWithinBounds(x2, y2)) {
 		return 0;
 	}
 	char thisOne = board[x1][y1];
 	char thatOne = board[x2][y2];
 	switch (moveType) {
 		case 0:
-			if (isAhead(thisOne, x1, x2) && areVerticallyAligned(y1, y2)) {
-				
-				switch (straightDistance(x1, y1, x2, y2)) {
-					case 1:
-						if (isEmpty(thatOne)) {
-							return 1;
-						}
-						break;
-					case 2:
-						if (isExiting(content, x1) && isEmpty(possibleMidway) && isEmpty(thatOne)) {
-							return 1;
-						}
-				}
-			} 
+			return canDiagonalMove(board, x1, y1, x2, y2) & diagonalDistance(x1, x2) | canStraightMove(board, x1, y1, x2, y2) & straightDistance(x1, y1, x2, y2) & isEmpty(thatOne);
+			break;
 		case 1:
-			if (areEnemies(thisOne, thatOne) && isAhead(thisOne, x1, x2) && areDiagonallyAligned(x1, y1, x2, y2) && diagonalDistance(x1, y1, x2, y2) == 1) {
-				return 1;
-			}
-		
+			return canDiagonalMove(board, x1, y1, x2, y2) & diagonalDistance(x1, x2) | canStraightMove(board, x1, y1, x2, y2) & straightDistance(x1, y1, x2, y2) & areEnemies(thisOne, thatOne);		
 	}
 
-	return canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2) | canCastle(castling, x2, y2);
+	return canDiagonalMove(board, x1, y1, x2, y2) & diagonalDistance(x1, x2) | canStraightMove(board, x1, y1, x2, y2) & straightDistance(x1, y1, x2, y2) & isEmpty(thatOne);
 }
 
 unsigned char isWithinBounds(int x, int y) {
@@ -386,9 +381,6 @@ unsigned char isWithinBounds(int x, int y) {
 
 // moveType: 0 = ocupação, 1 = ataque, ok?
 unsigned char canPawnMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {	
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
-		return 0;
-	}
 	char thisOne = board[x1][y1];
 	char possibleMidway = board[(x1 + x2) / 2][y1];
 	char thatOne = board[x2][y2];
@@ -418,17 +410,15 @@ unsigned char canPawnMove(char **board, char *castling, char *enpassant, int mov
 
 // ok?
 unsigned char canKnightMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
-	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
-		return 0;
-	}
 	char thisOne = board[x1][y1];
 	char thatOne = board[x2][y2];
 	switch (moveType) {
 		case 0:
-			return canLMove(board, x1, y1, x2, y2) | isEmpty(thatOne) ? 1 : 0;
+			return canLMove(board, x1, y1, x2, y2) & isEmpty(thatOne) ? 1 : 0;
 		case 1:
-			return canLMove(board, x1, y1, x2, y2) | areEnemies(thisOne, thatOne) ? 1 : 0;		
+			return canLMove(board, x1, y1, x2, y2) & areEnemies(thisOne, thatOne) ? 1 : 0;		
 	}
+	return 0;
 }
 
 /*
@@ -550,6 +540,7 @@ unsigned char isDrowned() {
 	return 1;
 }
 
+/*
 unsigned char isWhiteUnderAttack(char **board, struct xpiece *list, char *castling, char *enpassant, int x, int y) {
 	int i;
 
@@ -639,7 +630,9 @@ unsigned char canBlackKingReact(char **board, struct xpiece *list, char *castlin
 	}
 	return ans;
 }
+*/
 
+/*
 unsigned char isWhiteKingInCheck(char **board, struct xpiece *list, char *castling, char *enpassant) {
 	int i;
 
@@ -663,6 +656,7 @@ unsigned char isBlackKingInCheck(char **board, struct xpiece *list, char *castli
 	}
 	return 0;
 }
+*/
 
 struct xpiece *makeList(char **board) {
   int i, j, p = 0;
@@ -1012,6 +1006,7 @@ int main() {
 	
 	list = makeList(board);
 
+	
 
 	free(boardConfig);
 	free(castling);
