@@ -12,7 +12,7 @@ const char ranks[NUMRANKS] = {'P', 'N', 'B', 'R', 'Q', 'K'};
 struct xpiece {
 	unsigned char isActive, hasMoved;
 	int xp, yp;
-	unsigned char (*moveFun)(char **, char *, char *, int, int, int, int);
+	unsigned char (*moveFun)(char **, char *, char *, int, int, int, int, int);
 };
 
 /*
@@ -348,13 +348,35 @@ unsigned char canQueenMove(char **board, char *castling, char *enpassant, int x1
 	return 0;
 }
 
-unsigned char canKingMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
+unsigned char canKingMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
 	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
 		return 0;
 	}
-	if (verticalDistance(x1, y1, x2, y2) != 1 && diagonalDistance(x1, x2) != 1 && !hasCastlingAvailable (castling, board[x1][y1])) {
-		return 0;
+	char thisOne = board[x1][y1];
+	char thatOne = board[x2][y2];
+	switch (moveType) {
+		case 0:
+			if (isAhead(thisOne, x1, x2) && areVerticallyAligned(y1, y2)) {
+				
+				switch (straightDistance(x1, y1, x2, y2)) {
+					case 1:
+						if (isEmpty(thatOne)) {
+							return 1;
+						}
+						break;
+					case 2:
+						if (isExiting(content, x1) && isEmpty(possibleMidway) && isEmpty(thatOne)) {
+							return 1;
+						}
+				}
+			} 
+		case 1:
+			if (areEnemies(thisOne, thatOne) && isAhead(thisOne, x1, x2) && areDiagonallyAligned(x1, y1, x2, y2) && diagonalDistance(x1, y1, x2, y2) == 1) {
+				return 1;
+			}
+		
 	}
+
 	return canDiagonalMove(board, x1, y1, x2, y2) | canVerticalMove(board, x1, y1, x2, y2) | canCastle(castling, x2, y2);
 }
 
@@ -368,6 +390,7 @@ unsigned char canPawnMove(char **board, char *castling, char *enpassant, int mov
 		return 0;
 	}
 	char thisOne = board[x1][y1];
+	char possibleMidway = board[(x1 + x2) / 2][y1];
 	char thatOne = board[x2][y2];
 	switch (moveType) {
 		case 0:
@@ -379,7 +402,7 @@ unsigned char canPawnMove(char **board, char *castling, char *enpassant, int mov
 						}
 						break;
 					case 2:
-						if (isExiting(content, x1) && isEmpty(thatOne)) {
+						if (isExiting(content, x1) && isEmpty(possibleMidway) && isEmpty(thatOne)) {
 							return 1;
 						}
 				}
@@ -393,19 +416,29 @@ unsigned char canPawnMove(char **board, char *castling, char *enpassant, int mov
 	return 0;
 }
 
-unsigned char canKnightMove(char **board, char *castling, char *enpassant, int x1, int y1, int x2, int y2) {
-	if (x1 == x2 && y1 == y2) {
+// ok?
+unsigned char canKnightMove(char **board, char *castling, char *enpassant, int moveType, int x1, int y1, int x2, int y2) {
+	if ((areVerticallyAligned(y1, y2) && areHorizontallyAligned(x1, x2)) || !isWithinBounds(x1, y1)) || !isWithinBounds(x2, y2)) {
 		return 0;
 	}
-	return canLMove(board, x1, y1, x2, y2);
+	char thisOne = board[x1][y1];
+	char thatOne = board[x2][y2];
+	switch (moveType) {
+		case 0:
+			return canLMove(board, x1, y1, x2, y2) | isEmpty(thatOne) ? 1 : 0;
+		case 1:
+			return canLMove(board, x1, y1, x2, y2) | areEnemies(thisOne, thatOne) ? 1 : 0;		
+	}
 }
 
+/*
 unsigned char isAttack(char **board, int x1, int y1, int x2, int y2) {
 	if (isEnemy(board[x1][y1], board[x2][y2])) {
 		return 1;
 	}
 	return 0;
 }
+*/
 
 /*
 char isCastlingOkay(...) {
